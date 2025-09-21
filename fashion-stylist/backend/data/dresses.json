@@ -1,0 +1,7 @@
+[
+    {"id": "1", "name": "Red Evening Gown", "image": "/uploads/red_gown.jpg", "price": 120, "tags": ["wedding","party"]},
+    {"id": "2", "name": "Blue Casual Dress", "image": "/uploads/blue_dress.jpg", "price": 80, "tags": ["casual","day"]},
+    {"id": "3", "name": "Black Cocktail Dress", "image": "/uploads/black_cocktail.jpg", "price": 100, "tags": ["party","evening"]},
+    {"id": "4", "name": "Floral Summer Dress", "image": "/uploads/floral_dress.jpg", "price": 70, "tags": ["casual","summer"]}
+  ]
+  
