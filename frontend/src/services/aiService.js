@@ -290,6 +290,270 @@ class AIService {
     ]
   }
 
+
+
+  // Add this new method for occasion-based outfit generation
+  async generateOccasionOutfits(context) {
+    const { occasion, preferences, userProfile } = context
+    
+    // Simulate AI processing time
+    await new Promise(resolve => setTimeout(resolve, 2000))
+    
+    try {
+      // Get occasion-specific rules
+      const occasionRules = this.getOccasionRules(occasion)
+      
+      // Filter items suitable for the occasion
+      let suitableItems = this.fashionDatabase.filter(item => {
+        // Check if item is suitable for the occasion
+        if (occasionRules.occasions && !item.occasions.some(occ => occasionRules.occasions.includes(occ))) {
+          return false
+        }
+        
+        // Check formality level
+        if (occasionRules.formality && !occasionRules.formality.includes(item.formality)) {
+          return false
+        }
+        
+        // Check style preferences
+        if (preferences.style && !item.tags.includes(preferences.style)) {
+          return false
+        }
+        
+        // Check color preferences
+        if (preferences.colors && preferences.colors.length > 0) {
+          const hasMatchingColor = item.colors.some(itemColor => 
+            preferences.colors.some(prefColor => 
+              itemColor.toLowerCase().includes(prefColor.toLowerCase())
+            )
+          )
+          if (!hasMatchingColor) return false
+        }
+        
+        return true
+      })
+      
+      // Apply budget filter if specified
+      if (preferences.budget) {
+        suitableItems = this.filterByBudget(suitableItems, preferences.budget)
+      }
+      
+      // If we don't have enough items, relax some constraints
+      if (suitableItems.length < 5) {
+        suitableItems = this.fashionDatabase.filter(item => 
+          item.occasions.includes(occasion) || 
+          (occasionRules.formality && occasionRules.formality.includes(item.formality))
+        )
+      }
+      
+      // Create complete outfits
+      const outfits = this.createCompleteOutfits(suitableItems, occasion, preferences)
+      
+      return outfits
+      
+    } catch (error) {
+      console.error('Error generating occasion outfits:', error)
+      return this.getFallbackOutfits(occasion)
+    }
+  }
+
+  // Helper method to get occasion-specific rules
+  getOccasionRules(occasion) {
+    const rules = {
+      'wedding': {
+        occasions: ['wedding', 'party', 'formal'],
+        formality: ['formal', 'semi-formal'],
+        avoidColors: ['white', 'ivory'],
+        preferredStyles: ['elegant', 'traditional', 'romantic']
+      },
+      'party': {
+        occasions: ['party', 'date'],
+        formality: ['semi-formal', 'formal'],
+        preferredStyles: ['trendy', 'elegant', 'glamorous']
+      },
+      'work': {
+        occasions: ['work'],
+        formality: ['formal', 'business-casual'],
+        preferredStyles: ['professional', 'classic', 'minimalist']
+      },
+      'casual': {
+        occasions: ['casual'],
+        formality: ['casual', 'informal'],
+        preferredStyles: ['casual', 'comfortable', 'relaxed']
+      },
+      'date': {
+        occasions: ['date', 'party'],
+        formality: ['semi-formal', 'casual'],
+        preferredStyles: ['romantic', 'elegant', 'trendy']
+      },
+      'travel': {
+        occasions: ['travel', 'casual'],
+        formality: ['casual'],
+        preferredStyles: ['comfortable', 'versatile', 'practical']
+      },
+      'festival': {
+        occasions: ['festival', 'wedding'],
+        formality: ['formal', 'semi-formal'],
+        preferredStyles: ['traditional', 'colorful', 'festive']
+      },
+      'gym': {
+        occasions: ['gym', 'sports'],
+        formality: ['casual'],
+        preferredStyles: ['sporty', 'comfortable', 'athletic']
+      }
+    }
+    
+    return rules[occasion] || rules['casual']
+  }
+
+  // Helper method to create complete outfits
+  createCompleteOutfits(items, occasion, preferences) {
+    const outfits = []
+    
+    // Group items by category
+    const itemsByCategory = {
+      tops: items.filter(item => ['tops', 'shirts', 'blouses'].includes(item.category.toLowerCase())),
+      bottoms: items.filter(item => ['jeans', 'pants', 'skirts', 'bottoms'].includes(item.category.toLowerCase())),
+      dresses: items.filter(item => item.category.toLowerCase() === 'dresses'),
+      footwear: items.filter(item => item.category.toLowerCase() === 'footwear'),
+      accessories: items.filter(item => ['jewelry', 'bags', 'accessories'].includes(item.category.toLowerCase())),
+      outerwear: items.filter(item => ['blazers', 'jackets', 'cardigans'].includes(item.category.toLowerCase()))
+    }
+    
+    // Create outfit combinations
+    for (let i = 0; i < 3; i++) {
+      const outfit = {
+        id: Date.now() + i,
+        items: [],
+        totalPrice: 0,
+        style: preferences.style || 'stylish',
+        description: '',
+        confidence: 0,
+        stylingTips: []
+      }
+      
+      // Strategy 1: Dress-based outfit
+      if (itemsByCategory.dresses.length > 0 && Math.random() > 0.4) {
+        const dress = itemsByCategory.dresses[Math.floor(Math.random() * itemsByCategory.dresses.length)]
+        outfit.items.push(dress)
+        
+        // Add accessories
+        if (itemsByCategory.accessories.length > 0) {
+          const accessory = itemsByCategory.accessories[Math.floor(Math.random() * itemsByCategory.accessories.length)]
+          outfit.items.push(accessory)
+        }
+        
+        // Add footwear
+        if (itemsByCategory.footwear.length > 0) {
+          const shoes = itemsByCategory.footwear[Math.floor(Math.random() * itemsByCategory.footwear.length)]
+          outfit.items.push(shoes)
+        }
+        
+        // Add outerwear for formal occasions
+        if (['wedding', 'work', 'party'].includes(occasion) && itemsByCategory.outerwear.length > 0) {
+          const outerwear = itemsByCategory.outerwear[Math.floor(Math.random() * itemsByCategory.outerwear.length)]
+          outfit.items.push(outerwear)
+        }
+        
+        outfit.stylingTips = [
+          `This ${dress.title.toLowerCase()} is perfect for ${occasion}`,
+          'Complete the look with minimal jewelry for elegance',
+          'Choose comfortable yet stylish footwear'
+        ]
+      }
+      // Strategy 2: Separates-based outfit
+      else {
+        // Add top
+        if (itemsByCategory.tops.length > 0) {
+          const top = itemsByCategory.tops[Math.floor(Math.random() * itemsByCategory.tops.length)]
+          outfit.items.push(top)
+        }
+        
+        // Add bottom
+        if (itemsByCategory.bottoms.length > 0) {
+          const bottom = itemsByCategory.bottoms[Math.floor(Math.random() * itemsByCategory.bottoms.length)]
+          outfit.items.push(bottom)
+        }
+        
+        // Add footwear
+        if (itemsByCategory.footwear.length > 0) {
+          const shoes = itemsByCategory.footwear[Math.floor(Math.random() * itemsByCategory.footwear.length)]
+          outfit.items.push(shoes)
+        }
+        
+        // Add outerwear for professional/formal occasions
+        if (['work', 'wedding', 'party'].includes(occasion) && itemsByCategory.outerwear.length > 0) {
+          const outerwear = itemsByCategory.outerwear[Math.floor(Math.random() * itemsByCategory.outerwear.length)]
+          outfit.items.push(outerwear)
+        }
+        
+        // Add accessories
+        if (itemsByCategory.accessories.length > 0) {
+          const accessory = itemsByCategory.accessories[Math.floor(Math.random() * itemsByCategory.accessories.length)]
+          outfit.items.push(accessory)
+        }
+        
+        outfit.stylingTips = [
+          'Layer pieces for a sophisticated look',
+          'Mix textures for visual interest',
+          'Coordinate colors for a cohesive outfit'
+        ]
+      }
+      
+      // Calculate total price and confidence
+      outfit.totalPrice = outfit.items.reduce((sum, item) => {
+        const price = parseInt(item.price.replace(/[₹,]/g, ''))
+        return sum + price
+      }, 0)
+      
+      outfit.confidence = Math.floor(Math.random() * 15) + 85
+      outfit.description = this.generateOutfitDescription(outfit, occasion)
+      
+      // Only add outfit if it has at least 2 items
+      if (outfit.items.length >= 2) {
+        outfits.push(outfit)
+      }
+    }
+    
+    return outfits.length > 0 ? outfits : this.getFallbackOutfits(occasion)
+  }
+
+  // Helper method to generate outfit descriptions
+  generateOutfitDescription(outfit, occasion) {
+    const occasionDescriptions = {
+      'wedding': 'Elegant and respectful attire perfect for wedding celebrations',
+      'party': 'Stylish and trendy look that will make you stand out',
+      'work': 'Professional and polished outfit for the workplace',
+      'casual': 'Comfortable yet stylish for everyday wear',
+      'date': 'Romantic and charming look perfect for special moments',
+      'travel': 'Comfortable and practical outfit for your journey',
+      'festival': 'Traditional and festive attire for celebrations',
+      'gym': 'Comfortable and functional workout wear'
+    }
+    
+    return occasionDescriptions[occasion] || 'A perfectly curated outfit for your occasion'
+  }
+
+  // Fallback outfits when main algorithm fails
+  getFallbackOutfits(occasion) {
+    const fallbackItems = this.fashionDatabase.slice(0, 8)
+    
+    return [{
+      id: Date.now(),
+      items: fallbackItems.slice(0, 3),
+      totalPrice: 5000,
+      style: 'classic',
+      description: `A classic ${occasion} outfit curated just for you`,
+      confidence: 80,
+      stylingTips: [
+        'Classic pieces never go out of style',
+        'Focus on fit and comfort',
+        'Add personal touches with accessories'
+      ]
+    }]
+  }
+
+
   // Image Analysis Method
   async analyzeStyleImage(imageFile, context) {
     await new Promise(resolve => setTimeout(resolve, 2000))
